@@ -23,12 +23,14 @@ from sklearn.cluster import KMeans
 from sklearn.experimental import enable_halving_search_cv
 from sklearn.model_selection import HalvingGridSearchCV
 
-DATASET = "macav2"
+DATASET = "noaa_nam_2"
 DASK_URL = "localhost:9010"
 ALGORITHM = "lr"
-SINGLE_MODEL = False
+SINGLE_MODEL = True
 
-df_clusters = pd.read_csv("~/ucc-21/clusters-macav2.csv")
+# df_clusters = pd.read_csv("~/ucc-21/clusters-macav2.csv")
+df_clusters = pd.read_csv("~/ucc-21/clusters-noaa_nam_2-1.csv")
+
 time1 = time()
 gk = df_clusters.groupby('cluster_id')
 

@@ -26,9 +26,11 @@ import dask
 from dask import delayed
 from dask.distributed import Client
 
-DATASET = "macav2"
+DATASET = "noaa_nam_2"
+DASK_URL = "lattice-150:8786"
 
-df_clusters = pd.read_csv("~/ucc-21/clusters-macav2.csv")
+# df_clusters = pd.read_csv("~/ucc-21/clusters-macav2.csv")
+df_clusters = pd.read_csv("~/ucc-21/clusters-noaa_nam_2-1.csv")
 print(df_clusters.head())
 
 time1 = time()
@@ -65,8 +67,8 @@ for name, group in gk:
     for c in children:
         child_to_parent[c] = pg
 
-print(parent_maps)
-print(child_to_parent)
+print(f'parent_maps_size: {len(parent_maps)}')
+print(f'child_to_parent_size: {len(child_to_parent)}')
 
 # ----------------------------------------------------
 # Constants and Helper Functions
@@ -74,7 +76,7 @@ print(child_to_parent)
 sample_min = 0.05
 sample_max = 0.25
 
-query_collection = "macav2"
+query_collection = DATASET
 
 mongo_urls = [
     'mongodb://lattice-100:27018/',
@@ -88,10 +90,24 @@ mongo_db_name = "sustaindb"
 query_fild = "gis_join"
 train_test = 0.8
 
-if DATASET == 'macav2':
-    training_labels = ["min_surface_downwelling_shortwave_flux_in_air", "max_surface_downwelling_shortwave_flux_in_air",
-                   "max_specific_humidity", "min_max_air_temperature", "max_max_air_temperature"]
+if DATASET == "macav2":
+    training_labels = [
+        "min_surface_downwelling_shortwave_flux_in_air",
+        "max_surface_downwelling_shortwave_flux_in_air",
+        "max_specific_humidity",
+        "min_max_air_temperature",
+        "max_max_air_temperature"
+    ]
     target_labels = ["max_min_air_temperature"]
+elif DATASET == "noaa_nam_2":
+    training_labels = [
+        "mean_sea_level_pressure_pascal",
+        "surface_pressure_surface_level_pascal",
+        "10_metre_u_wind_component_meters_per_second",
+        "10_metre_v_wind_component_meters_per_second",
+        "soil_temperature_kelvin"
+    ]
+    target_labels = ["pressure_pascal"]
 
 
 # QUERY projection
@@ -232,8 +248,10 @@ def train_gisjoin(gis_join, exhaustive=True, saved_models={}):
     # saved_models[gis_join] = clf
     _time2 = time()
     return gis_join, clf, _time2 - _time1
-# ----------------------------------------------------
 
+
+# ----------------------------------------------------
+client = Client(DASK_URL)
 
 outputs = []
 time1 = time()
@@ -254,7 +272,7 @@ for sm in results:
     saved_models[gis_join] = model
 
 print(saved_models)
-pickle.dump(saved_models, open(f'parent_models_{DATASET}.pkl', 'wb'))
+pickle.dump(saved_models, open(f'parent_models_{DATASET}-1.pkl', 'wb'))
 
 time2 = time()
 print(f'Time Taken to build parent models: {time2 - time1} s')
