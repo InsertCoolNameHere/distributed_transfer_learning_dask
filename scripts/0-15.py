@@ -87,9 +87,23 @@ query_fild = "gis_join"
 train_test = 0.8
 
 if DATASET == "macav2":
-    training_labels = ["min_surface_downwelling_shortwave_flux_in_air", "max_surface_downwelling_shortwave_flux_in_air",
-                       "max_specific_humidity", "min_max_air_temperature", "max_max_air_temperature"]
+    training_labels = [
+        "min_surface_downwelling_shortwave_flux_in_air",
+        "max_surface_downwelling_shortwave_flux_in_air",
+        "max_specific_humidity",
+        "min_max_air_temperature",
+        "max_max_air_temperature"
+    ]
     target_labels = ["max_min_air_temperature"]
+elif DATASET == "noaa_nam_2":
+    training_labels = [
+        "mean_sea_level_pressure_pascal",
+        "surface_pressure_surface_level_pascal",
+        "10_metre_u_wind_component_meters_per_second",
+        "10_metre_v_wind_component_meters_per_second",
+        "soil_temperature_kelvin"
+    ]
+    target_labels = ["pressure_pascal"]
 
 # QUERY projection
 client_projection = {}
