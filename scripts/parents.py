@@ -6,6 +6,7 @@ from sklearn import ensemble
 import numpy as np
 import os
 from sklearn import linear_model
+from sklearn.svm import SVR
 from sklearn.model_selection import cross_val_score, train_test_split, KFold
 from sklearn.metrics import mean_squared_error
 from math import sqrt
@@ -26,11 +27,12 @@ import dask
 from dask import delayed
 from dask.distributed import Client
 
-DATASET = "noaa_nam_2"
+DATASET = "macav2"
 DASK_URL = "lattice-150:8786"
+ALGORITHM = 'svr'
 
-# df_clusters = pd.read_csv("~/ucc-21/clusters-macav2.csv")
-df_clusters = pd.read_csv("~/ucc-21/clusters-noaa_nam_2-1.csv")
+df_clusters = pd.read_csv(f'~/ucc-21/clusters-{DATASET}.csv')
+# df_clusters = pd.read_csv("~/ucc-21/clusters-noaa_nam_2-1.csv")
 print(df_clusters.head())
 
 time1 = time()
@@ -185,6 +187,7 @@ def get_distance_percentage(gis_join):
 def exhaustive_training(X, Y, gis_join, algorithm):
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2)
 
+    print(f'exhaustive_training: {algorithm}')
     if algorithm == 'gb':
         param_grid = {'max_depth': [2, 3], 'min_samples_split': [15, 20, 50]}
         base_est = ensemble.GradientBoostingRegressor(random_state=0)
@@ -195,6 +198,22 @@ def exhaustive_training(X, Y, gis_join, algorithm):
         base_est = linear_model.LinearRegression()
         sh = HalvingGridSearchCV(base_est, param_grid, cv=5, verbose=1,
                                  factor=2, resource='n_samples', max_resources=600).fit(X, pd.Series.ravel(Y))
+    elif algorithm == 'svr':
+        # param_grid = {'degree': [2, 3], 'shrinking': [True, False], 'epsilon': [0.1, 0.2]}
+        # param_grid = {'kernel': ['linear', 'poly'], 'gamma': ['scale', 'auto']}
+        param_grid = [
+            {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
+        ]
+        base_est = SVR()
+        sh = HalvingGridSearchCV(base_est, param_grid, cv=5, verbose=1,
+                                 factor=2, resource='n_samples', max_resources=600).fit(X, pd.Series.ravel(Y))
+    elif algorithm == 'lor': # logistic  regression
+        # dict_keys(['C', 'class_weight', 'dual', 'fit_intercept', 'intercept_scaling', 'l1_ratio',
+        # 'max_iter', 'multi_class', 'n_jobs', 'penalty', 'random_state', 'solver', 'tol', 'verbose', 'warm_start'])
+        param_grid = {'penalty': ['l2', 'none']}
+        base_est = linear_model.LogisticRegression()
+        sh = HalvingGridSearchCV(base_est, param_grid, cv=5, verbose=1,
+                                 factor=2, resource='n_samples', min_resources=600, max_resources=1000).fit(X, pd.Series.ravel(Y))
     else:
         print(f'Algorithm not supported: {algorithm}')
         return
@@ -241,7 +260,7 @@ def train_gisjoin(gis_join, exhaustive=True, saved_models={}):
     # print(X.shape, Y.shape)
 
     if exhaustive:
-        clf = exhaustive_training(X, Y, gis_join, 'gb')
+        clf = exhaustive_training(X, Y, gis_join, ALGORITHM)
     else:
         clf = sampled_training(X, Y, gis_join, saved_models)
 
