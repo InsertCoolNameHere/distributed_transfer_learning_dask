@@ -7,6 +7,7 @@ import numpy as np
 import os
 import pickle
 from sklearn import linear_model
+from sklearn.svm import SVR
 from sklearn.model_selection import cross_val_score, train_test_split, KFold
 from sklearn.metrics import mean_squared_error
 from math import sqrt
@@ -23,13 +24,13 @@ from sklearn.cluster import KMeans
 from sklearn.experimental import enable_halving_search_cv
 from sklearn.model_selection import HalvingGridSearchCV
 
-DATASET = "noaa_nam_2"
-DASK_URL = "localhost:9010"
-ALGORITHM = "lr"
+DATASET = "macav2"
+DASK_URL = "lattice-150:8786"
+ALGORITHM = "svr"
 SINGLE_MODEL = True
 
-# df_clusters = pd.read_csv("~/ucc-21/clusters-macav2.csv")
-df_clusters = pd.read_csv("~/ucc-21/clusters-noaa_nam_2-1.csv")
+df_clusters = pd.read_csv(f'~/ucc-21/clusters-{DATASET}.csv')
+# df_clusters = pd.read_csv("~/ucc-21/clusters-noaa_nam_2-1.csv")
 time1 = time()
 gk = df_clusters.groupby('cluster_id')
 
@@ -189,6 +190,13 @@ def exhaustive_training(X, Y, gis_join, algorithm):
     elif algorithm == 'lr':
         param_grid = {'fit_intercept': [True, False], 'normalize': [True, False]}
         base_est = linear_model.LinearRegression()
+        sh = HalvingGridSearchCV(base_est, param_grid, cv=5, verbose=1,
+                                 factor=2, resource='n_samples', max_resources=600).fit(X, pd.Series.ravel(Y))
+    elif algorithm == 'svr':
+        param_grid = [
+            {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
+        ]
+        base_est = SVR()
         sh = HalvingGridSearchCV(base_est, param_grid, cv=5, verbose=1,
                                  factor=2, resource='n_samples', max_resources=600).fit(X, pd.Series.ravel(Y))
     else:
